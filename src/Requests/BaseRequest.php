@@ -16,10 +16,30 @@ use Illuminate\Support\Collection;
  */
 class BaseRequest extends Collection
 {
+    const TYPE_QUEUE = 'queue';
+    const TYPE_TOPIC = 'topic';
+
+    /**
+     * @var string
+     */
+    protected $action = '';
+
+    /**
+     * @var
+     */
+    protected $type = self::TYPE_QUEUE;
+
     /**
      * @var string
      */
     protected $method;
+
+    public function __construct(array $items)
+    {
+        parent::__construct($items);
+
+        $this->put('Action', $this->action);
+    }
 
     /**
      * @return string
@@ -28,5 +48,13 @@ class BaseRequest extends Collection
     public function getMethod()
     {
         return $this->method;
+    }
+
+    /**
+     * @return string
+     */
+    public function getType()
+    {
+        return $this->type;
     }
 }

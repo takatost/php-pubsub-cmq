@@ -8,7 +8,21 @@ namespace Takatost\PubSub\CMQ\Requests;
  */
 class SubscribeMessageRequest extends BaseRequest
 {
+    /**
+     * @var string
+     */
+    protected $action = 'ReceiveMessage';
+
+    /**
+     * @var string
+     */
+    protected $type = self::TYPE_QUEUE;
+
+    /**
+     * @var string
+     */
     protected $method = 'POST';
+
     protected $items = [
         'Action' => 'ReceiveMessage',
 

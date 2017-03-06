@@ -8,10 +8,22 @@ namespace Takatost\PubSub\CMQ\Requests;
  */
 class PublishMessageRequest extends BaseRequest
 {
-    protected $method = 'POST';
-    protected $items = [
-        'Action' => 'PublishMessage',
+    /**
+     * @var string
+     */
+    protected $action = 'PublishMessage';
 
+    /**
+     * @var string
+     */
+    protected $type = self::TYPE_TOPIC;
+
+    /**
+     * @var string
+     */
+    protected $method = 'POST';
+
+    protected $items = [
         /**
          * @var string 主题名字
          */

@@ -18,53 +18,20 @@ use Takatost\PubSub\CMQ\Requests\SubscribeMessageRequest;
 class CMQPubSubAdapter implements PubSubAdapterInterface
 {
     /**
-     * @var array
-     */
-    protected $config;
-
-    /**
      * @var HttpClient
      */
     private $client;
 
     /**
-     * @var array GuzzleHttp options
+     * CMQPubSubAdapter constructor.
      */
-    private $options;
-
-    /**
-     * @param array $config
-     */
-    public function __construct(array $config)
+    public function __construct($client)
     {
-
-        if (empty($config['options'])) {
-
-            $this->options = [
-                'debug'   => false,
-                'timeout' => 10,
-            ];
-        } else {
-            $this->options = $config['options'];
-        }
-
-        $this->config = $config;
-        $this->client = new HttpClient($config);
-    }
-
-    /**
-     * Return the Config.
-     *
-     * @return array
-     */
-    public function getConfig()
-    {
-        return $this->config;
+        $this->client = $client;
     }
 
     /**
      * @return HttpClient
-     * @author         JohnWang <takato@vip.qq.com>
      */
     public function getClient()
     {
@@ -90,7 +57,7 @@ class CMQPubSubAdapter implements PubSubAdapterInterface
             ]);
 
             try {
-                $message = $this->client->send($request, $this->options);
+                $message = $this->client->send($request);
             } catch (RequestException $e) {
                 throw $e;
             } catch (ResponseException $e) {
@@ -126,14 +93,25 @@ class CMQPubSubAdapter implements PubSubAdapterInterface
      */
     public function publish($topicName, $message, $tags = [])
     {
-        $request = new PublishMessageRequest([
-            'topicName'          => $topicName,
-            'msgBody' => Utils::serializeMessage($message),
-            'msgTag' => $tags
-        ]);
+        $params = [
+            'topicName' => $topicName,
+            'msgBody'   => Utils::serializeMessage($message),
+        ];
+
+        if ($tags != null  && is_array($tags) && !empty($tags))
+        {
+            $n = 1 ;
+            foreach ($tags as $tag){
+                $key = 'msgTag.' . $n;
+                $params[$key]=$tag;
+                $n += 1 ;
+            }
+        }
+
+        $request = new PublishMessageRequest($params);
 
         try {
-            $this->client->send($request, $this->options);
+            $this->client->send($request);
         } catch (\Exception $e) {
             throw $e;
         }

@@ -5,15 +5,18 @@ include __DIR__ . '/../vendor/autoload.php';
 $config = [
     'secret_key' => '',
     'secret_id'  => '',
-    'end_point'  => 'https://cmq-queue-sh.api.qcloud.com/v2/index.php',
+    'queue_end_point'  => 'https://cmq-queue-sh.api.qcloud.com/v2/index.php',
+    'topic_end_point'  => 'https://cmq-topic-sh.api.qcloud.com/v2/index.php',
     'options'    => [
         'debug'   => false,
         'timeout' => 10,
     ]
 ];
 
-$adapter = new \Takatost\PubSub\CMQ\CMQPubSubAdapter($config);
+$client = new \Takatost\PubSub\CMQ\HttpClient($config);
 
-$adapter->subscribe('topic_queue_name', function ($message) {
+$adapter = new \Takatost\PubSub\CMQ\CMQPubSubAdapter($client);
+
+$adapter->subscribe('topic-queue-name', function ($message) {
     var_dump($message);
 });

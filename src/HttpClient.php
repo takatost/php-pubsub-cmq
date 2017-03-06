@@ -5,7 +5,6 @@ namespace Takatost\PubSub\CMQ;
 use GuzzleHttp\Client;
 use Illuminate\Support\Collection;
 use Psr\Http\Message\ResponseInterface;
-use Takatost\PubSub\CMQ\Exceptions\FailedResponseException;
 use Takatost\PubSub\CMQ\Exceptions\RequestException;
 use Takatost\PubSub\CMQ\Exceptions\ResponseException;
 use Takatost\PubSub\CMQ\Requests\BaseRequest;
@@ -26,8 +25,26 @@ class HttpClient
      */
     private $config;
 
+    /**
+     * @var array GuzzleHttp options
+     */
+    private $options;
+
+    /**
+     * HttpClient constructor.
+     * @param array $config
+     */
     public function __construct(array $config)
     {
+        if (empty($config['options'])) {
+            $this->options = [
+                'debug'   => false,
+                'timeout' => 10,
+            ];
+        } else {
+            $this->options = $config['options'];
+        }
+
         $this->config = $config;
         $this->client = new Client();
     }
@@ -39,13 +56,19 @@ class HttpClient
      */
     public function send(BaseRequest $request, array $options = [])
     {
+        $options = array_merge(
+            $this->options,
+            $options
+        );
+
+        $host = $this->config[$request->getType() . '_end_point'];
         $method = strtoupper($request->getMethod());
         $this->sign($request, $this->config);
         $attr = $request->all();
 
-        $options[$method === 'POST' ? 'body' : 'query'] = http_build_query($attr);
+        $options[$method === 'POST' ? 'form_params' : 'query'] = $attr;
 
-        $promise = $this->client->requestAsync($method, $this->config['end_point'], $options);
+        $promise = $this->client->requestAsync($method, $host, $options);
 
         return $promise->then(function (ResponseInterface $response) {
             $body = $response->getBody()->getContents();
@@ -57,7 +80,6 @@ class HttpClient
 
             return $body;
         }, function (\GuzzleHttp\Exception\RequestException $requestException) {
-
             throw new RequestException($requestException->getMessage(), 0, $requestException);
         })->wait();
     }
@@ -93,8 +115,8 @@ class HttpClient
     {
         $request->put('Nonce', mt_rand(10000, 9999999));
         $request->put('Timestamp', time());
-        $request->put('SecretId', $this->config['secret_id']);
-        $request->put('Signature', $this->makeSign($request, $config['secret_key'], $config['end_point']));
+        $request->put('SecretId', $config['secret_id']);
+        $request->put('Signature', $this->makeSign($request, $config['secret_key'], $config[$request->getType() . '_end_point']));
 
         return $request;
     }
@@ -112,11 +134,57 @@ class HttpClient
         $attr = $request->all();
         ksort($attr, SORT_STRING);
 
-        $queryString = http_build_query($attr);
+        $queryString = self::_buildParamStr($attr);
 
         $parseUrl = parse_url($endPoint);
-        $srcString = $request->getMethod() . $parseUrl['host'] . $parseUrl['path'] . '?' . $queryString;
+        $srcString = $request->getMethod() . $parseUrl['host'] . $parseUrl['path'] . $queryString;
 
         return base64_encode(hash_hmac('sha1', $srcString, $secretKey, true));
+    }
+
+    /**
+     * _buildParamStr
+     * 拼接参数
+     * @param  array $requestParams  请求参数
+     * @param  string $requestMethod 请求方法
+     * @return
+     */
+    protected static function _buildParamStr($requestParams, $requestMethod = 'POST')
+    {
+        $paramStr = '';
+        ksort($requestParams);
+        $i = 0;
+        foreach ($requestParams as $key => $value)
+        {
+            if ($key === 'Signature')
+            {
+                continue;
+            }
+
+            // 排除上传文件的参数
+            if ($requestMethod === 'POST' && substr($value, 0, 1) === '@') {
+                continue;
+            }
+
+            // 把 参数中的 _ 替换成 .
+            if (strpos($key, '_'))
+            {
+                $key = str_replace('_', '.', $key);
+            }
+
+            if ($i == 0)
+            {
+                $paramStr .= '?';
+            }
+            else
+            {
+                $paramStr .= '&';
+            }
+
+            $paramStr .= $key . '=' . $value;
+            ++$i;
+        }
+
+        return $paramStr;
     }
 }
