@@ -76,7 +76,10 @@ class CMQPubSubAdapter implements PubSubAdapterInterface
                 continue;
             }
 
-            call_user_func($handler, Utils::unserializeMessagePayload($message->get('msgBody')));
+            call_user_func($handler,
+                Utils::unserializeMessagePayload($message->get('msgBody')),
+                new MessageHandler($this->client, $topicQueueName, $message)
+            );
 
             unset($message);
         }
