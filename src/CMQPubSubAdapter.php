@@ -72,7 +72,8 @@ class CMQPubSubAdapter implements PubSubAdapterInterface
                 throw $e;
             }
 
-            if ($message === null) {
+            if ($message === null || $message->get('msgBody') === null) {
+                sleep(mt_rand(1, 5));
                 continue;
             }
 
